@@ -1,0 +1,46 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+
+license="MIT"
+
+[[mods]]
+modId="cnpcemotes"
+version="1.0.0"
+displayName="CNPC Emote"
+authors="Bin"
+description="CustomNPCs与Emote整合模组"
+
+[[dependencies.cnpcemotes]]
+    modId="forge"
+    mandatory=true
+    versionRange="[47,)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.cnpcemotes]]
+    modId="minecraft"
+    mandatory=true
+    versionRange="[1.20.1,1.21)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.cnpcemotes]]
+    modId="customnpcs"
+    mandatory=true
+    versionRange="[1,)"
+    ordering="BEFORE"
+    side="BOTH"
+
+[[dependencies.cnpcemotes]]
+    modId="emotecraft"
+    mandatory=true
+    versionRange="[1,)"
+    ordering="BEFORE"
+    side="BOTH"
+
+[[dependencies.cnpcemotes]]
+    modId="playeranimator"
+    mandatory=true
+    versionRange="[1,)"
+    ordering="BEFORE"
+    side="BOTH"

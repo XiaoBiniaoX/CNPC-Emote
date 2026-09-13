@@ -1,0 +1,20 @@
+{
+  "cnpcplus.gui.fuzzyMatch": "配置模糊化",
+  "cnpcplus.gui.nameCheck": "名字检查",
+  "cnpcplus.scale.width": "宽度",
+  "cnpcplus.scale.height": "高度",
+  "cnpcplus.scale.depth": "深度",
+  "cnpcplus.lootMode.feet": "全掉原地",
+  "cnpcplus.lootMode.spread": "小扩散",
+  "cnpcplus.lootMode.fly": "瞎几把飞",
+  "cnpcplus.crafting.browseAll": "全部",
+  "cnpcplus.crafting.carpentry": "木工台",
+  "cnpcplus.crafting.anvil": "铁砧",
+  "cnpcplus.crafting.recipe": "配方:",
+  "cnpcplus.equip.mainhand": "主手",
+  "cnpcplus.equip.offhand": "副手",
+  "cnpcplus.equip.helmet": "头盔",
+  "cnpcplus.equip.chestplate": "甲胄",
+  "cnpcplus.equip.leggings": "护腿",
+  "cnpcplus.equip.boots": "靴子"
+}

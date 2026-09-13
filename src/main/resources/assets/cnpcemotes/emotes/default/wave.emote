@@ -1,0 +1,33 @@
+{
+  "jsonFormatVersion": 1,
+  "animationVersion": 2,
+  "animTime": 0,
+  "loop": "loop",
+  "animateBodyYaw": false,
+  "animateHeadYaw": false,
+  "extraData": {
+    "name": "wave"
+  },
+  "bones": [
+    {
+      "name": "head",
+      "parent": "bone",
+      "rotation": [0, 0, 0],
+      "keyframes": [
+        {"time": 0, "rotation": [0, 0, 0]},
+        {"time": 10, "rotation": [0, 0, 20]},
+        {"time": 20, "rotation": [0, 0, 0]}
+      ]
+    },
+    {
+      "name": "rightArm",
+      "parent": "torso",
+      "rotation": [0, 0, 0],
+      "keyframes": [
+        {"time": 0, "rotation": [0, 0, 0]},
+        {"time": 10, "rotation": [-90, 0, 0]},
+        {"time": 20, "rotation": [0, 0, 0]}
+      ]
+    }
+  ]
+}

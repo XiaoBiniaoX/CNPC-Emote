@@ -1,0 +1,10 @@
+{
+  "cnpcemotes.command.success": "%s 个NPC正在播放 %s",
+  "cnpcemotes.command.stopped": "已停止 %s 个NPC的动画",
+  "cnpcemotes.error.not_npc": "目标不是NPC",
+  "cnpcemotes.error.no_target": "未找到有效目标",
+  "cnpcemotes.error.invalid_emote_name": "无效的动画名称",
+  "cnpcemotes.error.unknown_emote": "未知的动画: %s",
+  "cnpcemotes.error.animation_not_loaded": "动画未加载: %s",
+  "cnpcemotes.error.no_npc_found": "未找到匹配的NPC: %s"
+}

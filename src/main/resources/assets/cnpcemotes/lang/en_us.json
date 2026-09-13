@@ -1,0 +1,10 @@
+{
+  "cnpcemotes.command.success": "%s NPC(s) are now playing %s",
+  "cnpcemotes.command.stopped": "Stopped emote on %s NPC(s)",
+  "cnpcemotes.error.not_npc": "Target is not an NPC",
+  "cnpcemotes.error.no_target": "No valid target found",
+  "cnpcemotes.error.invalid_emote_name": "Invalid emote name",
+  "cnpcemotes.error.unknown_emote": "Unknown emote: %s",
+  "cnpcemotes.error.animation_not_loaded": "Animation not loaded: %s",
+  "cnpcemotes.error.no_npc_found": "No NPCs found matching: %s"
+}

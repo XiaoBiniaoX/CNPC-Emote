@@ -1,0 +1,14 @@
+{
+  "cnpcplus.gui.fuzzyMatch": "Fuzzy Config Match",
+  "cnpcplus.gui.nameCheck": "Name Check Only",
+  "cnpcplus.crafting.browseAll": "Browse All",
+  "cnpcplus.crafting.carpentry": "Carpentry",
+  "cnpcplus.crafting.anvil": "Anvil",
+  "cnpcplus.crafting.recipe": "Recipe:",
+  "cnpcplus.equip.mainhand": "Main Hand",
+  "cnpcplus.equip.offhand": "Off Hand",
+  "cnpcplus.equip.helmet": "Helmet",
+  "cnpcplus.equip.chestplate": "Chestplate",
+  "cnpcplus.equip.leggings": "Leggings",
+  "cnpcplus.equip.boots": "Boots"
+}
