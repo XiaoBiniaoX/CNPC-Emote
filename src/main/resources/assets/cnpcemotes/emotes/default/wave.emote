@@ -1,33 +1,21 @@
 {
-  "jsonFormatVersion": 1,
-  "animationVersion": 2,
-  "animTime": 0,
-  "loop": "loop",
-  "animateBodyYaw": false,
-  "animateHeadYaw": false,
-  "extraData": {
-    "name": "wave"
-  },
-  "bones": [
-    {
-      "name": "head",
-      "parent": "bone",
-      "rotation": [0, 0, 0],
-      "keyframes": [
-        {"time": 0, "rotation": [0, 0, 0]},
-        {"time": 10, "rotation": [0, 0, 20]},
-        {"time": 20, "rotation": [0, 0, 0]}
-      ]
-    },
-    {
-      "name": "rightArm",
-      "parent": "torso",
-      "rotation": [0, 0, 0],
-      "keyframes": [
-        {"time": 0, "rotation": [0, 0, 0]},
-        {"time": 10, "rotation": [-90, 0, 0]},
-        {"time": 20, "rotation": [0, 0, 0]}
-      ]
-    }
-  ]
+  "name": "wave",
+  "author": "CNPC-Emote",
+  "description": "default wave emote",
+  "uuid": "6c1e3a2b-9f4d-4b8e-a2c7-1d5e0f8a3b92",
+  "emote": {
+    "isLoop": "false",
+    "returnTick": 0,
+    "beginTick": 0,
+    "endTick": 20,
+    "stopTick": 21,
+    "degrees": false,
+    "moves": [
+      { "tick": 0,  "easing": "EASEINCIRC",  "rightArm": { "yaw": 0.0 } },
+      { "tick": 5,  "easing": "EASEOUTCIRC", "rightArm": { "yaw": 0.5 } },
+      { "tick": 10, "easing": "EASEINCIRC",  "rightArm": { "yaw": -0.5 } },
+      { "tick": 15, "easing": "EASEOUTCIRC", "rightArm": { "yaw": 0.5 } },
+      { "tick": 20, "easing": "EASEINCIRC",  "rightArm": { "yaw": 0.0 } }
+    ]
+  }
 }

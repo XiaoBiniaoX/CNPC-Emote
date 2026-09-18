@@ -1,8 +1,6 @@
 package bin.cnpcemotes.command;
 
 import bin.cnpcemotes.CnpcEmoteMod;
-import bin.cnpcemotes.animation.EmoteAnimation;
-import bin.cnpcemotes.state.NpcEmoteState;
 import dev.kosmx.playerAnim.core.data.KeyframeAnimation;
 import io.github.kosmx.emotes.api.events.server.ServerEmoteAPI;
 import net.minecraft.commands.CommandSourceStack;
@@ -37,7 +35,6 @@ public final class BinCnpcEmoteCommand {
     private static final String NPC_ARG = "npc";
     private static final String EMOTE_ARG = "emote";
     private static final Map<String, UUID> NAME_TO_UUID = new ConcurrentHashMap<>();
-    private static final Map<String, Integer> EMOTE_ANIM_CACHE = new ConcurrentHashMap<>();
 
     private BinCnpcEmoteCommand() {
     }
@@ -98,15 +95,7 @@ public final class BinCnpcEmoteCommand {
             return 0;
         }
 
-        int animId = EMOTE_ANIM_CACHE.getOrDefault(emoteName, -1);
-        if (animId < 0) {
-            animId = EmoteAnimation.registerEmote(emoteName);
-            EMOTE_ANIM_CACHE.put(emoteName, animId);
-        }
-
         for (EntityNPCInterface npc : npcs) {
-            npc.currentAnimation = animId;
-            npc.animationStart = (int) level.getGameTime();
             CnpcEmoteMod.startEmote(level, npc, emoteId, gameTime);
         }
 
@@ -136,8 +125,6 @@ public final class BinCnpcEmoteCommand {
         }
 
         for (EntityNPCInterface npc : npcs) {
-            npc.currentAnimation = 0;
-            npc.animationStart = 0;
             CnpcEmoteMod.stopEmote(level, npc);
         }
 

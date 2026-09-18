@@ -13,6 +13,7 @@ import noppes.npcs.api.wrapper.NPCWrapper;
 import noppes.npcs.entity.EntityNPCInterface;
 import org.spongepowered.asm.mixin.Mixin;
 
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
@@ -80,11 +81,16 @@ public abstract class NPCWrapperMixin {
     }
 
     /**
-     * 根据 emote 名称查找其 UUID。名称可能带 JSON 组件格式（{"translate":...,"fallback":...}），
-     * 取 fallback / translate / 裸字符串 与 emoteName 忽略大小写比较。
+     * 根据 emote 名称查找其 UUID。
+     * 1) 优先按文件名匹配（存档 customnpcs/emote/ 下加载的文件名，去扩展名，忽略大小写）。
+     * 2) 找不到时回退按动画内部 name 字段匹配（兼容 JSON 组件格式）。
      */
     private UUID findEmoteByName(String emoteName) {
-        String lowerName = emoteName.toLowerCase();
+        String lowerName = emoteName.toLowerCase(Locale.ROOT);
+        // 1) 按文件名匹配
+        UUID byFile = CnpcEmoteMod.EMOTE_BY_NAME.get(lowerName);
+        if (byFile != null) return byFile;
+        // 2) 回退：按动画内部 name 匹配
         for (Map.Entry<UUID, KeyframeAnimation> entry : UniversalEmoteSerializer.hiddenServerEmotes.entrySet()) {
             KeyframeAnimation anim = entry.getValue();
             if (anim.extraData == null) continue;
@@ -99,36 +105,51 @@ public abstract class NPCWrapperMixin {
 
     private String extractEmoteName(Object nameObj) {
         if (nameObj == null) return null;
-        if (nameObj instanceof String) {
-            String s = ((String) nameObj).trim();
-            if (s.startsWith("{") && s.endsWith("}")) {
-                try {
-                    JsonElement je = new JsonParser().parse(s);
-                    if (je.isJsonObject()) {
-                        if (je.getAsJsonObject().has("fallback")) {
-                            return je.getAsJsonObject().get("fallback").getAsString();
-                        }
-                        if (je.getAsJsonObject().has("translate")) {
-                            return je.getAsJsonObject().get("translate").getAsString();
-                        }
-                    }
-                } catch (Exception ignored) {
-                }
-            }
-            return s;
-        }
+        String result;
         if (nameObj instanceof JsonElement) {
-            JsonElement json = (JsonElement) nameObj;
-            if (json.isJsonObject()) {
-                if (json.getAsJsonObject().has("fallback")) {
-                    return json.getAsJsonObject().get("fallback").getAsString();
+            String fromJson = extractNameFromJson((JsonElement) nameObj);
+            result = fromJson != null ? fromJson : nameObj.toString();
+        } else {
+            String s = nameObj.toString().trim();
+            if (s.startsWith("{") || s.startsWith("[")) {
+                try {
+                    String fromJson = extractNameFromJson(new JsonParser().parse(s));
+                    result = fromJson != null ? fromJson : s;
+                } catch (Exception ignored) {
+                    result = s;
                 }
-                if (json.getAsJsonObject().has("translate")) {
-                    return json.getAsJsonObject().get("translate").getAsString();
-                }
+            } else {
+                result = s;
             }
-            return json.getAsString();
         }
-        return nameObj.toString();
+        // 剥离 Minecraft 颜色代码（§x），对齐命令 Tab 补全的 sanitizeName 行为
+        return result.replaceAll("\\u00a7.", "").trim();
+    }
+
+    /**
+     * 从 Minecraft TextComponent 的 JSON（对象或数组）里提取可读文本。
+     * 优先取 fallback（实际显示名），其次取 text，最后取 translate key。
+     */
+    private String extractNameFromJson(JsonElement je) {
+        if (je.isJsonObject()) {
+            com.google.gson.JsonObject o = je.getAsJsonObject();
+            if (o.has("fallback") && o.get("fallback").isJsonPrimitive()) {
+                String fb = o.get("fallback").getAsString();
+                if (!fb.isEmpty()) return fb;
+            }
+            if (o.has("text") && o.get("text").isJsonPrimitive()) {
+                String t = o.get("text").getAsString();
+                if (!t.isEmpty()) return t;
+            }
+            if (o.has("translate") && o.get("translate").isJsonPrimitive()) {
+                return o.get("translate").getAsString();
+            }
+        } else if (je.isJsonArray()) {
+            for (JsonElement e : je.getAsJsonArray()) {
+                String r = extractNameFromJson(e);
+                if (r != null) return r;
+            }
+        }
+        return null;
     }
 }

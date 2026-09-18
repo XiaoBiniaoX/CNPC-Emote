@@ -28,7 +28,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
@@ -40,6 +43,9 @@ public class CnpcEmoteMod {
 
     /** 存在 NPC 的 Forge ForgeData 里，随实体 NBT 自动存档/读档。 */
     private static final String NBT_EMOTE_ID = "CnpcEmoteId";
+
+    /** 存档 emote 文件名（去扩展名，小写）→ 动画 UUID。脚本 npc.playEmote() 按文件名查找。 */
+    public static final Map<String, UUID> EMOTE_BY_NAME = new ConcurrentHashMap<>();
 
     public static final SimpleChannel NETWORK = NetworkRegistry.newSimpleChannel(
             ResourceLocation.fromNamespaceAndPath("cnpcemotes", "main"),
@@ -121,25 +127,32 @@ public class CnpcEmoteMod {
                     .filter(p -> p.toString().toLowerCase().endsWith(".emotecraft") || p.toString().toLowerCase().endsWith(".emote") || p.toString().toLowerCase().endsWith(".json"))
                     .forEach(file -> {
                         try {
-                            java.io.InputStream is = java.nio.file.Files.newInputStream(file);
-                            String ext = file.getFileName().toString().toLowerCase();
-                            java.util.List<dev.kosmx.playerAnim.core.data.KeyframeAnimation> animations;
+                            byte[] bytes = java.nio.file.Files.readAllBytes(file);
+                            String ext = file.getFileName().toString().toLowerCase(Locale.ROOT);
+                            // .emote 可能是 quark 二进制，也可能内容恰为 JSON（jsonFormatVersion）——按内容嗅探
+                            String format;
                             if (ext.endsWith(".json")) {
-                                animations = io.github.kosmx.emotes.server.serializer.UniversalEmoteSerializer.readData(is, null, "json");
+                                format = "json";
                             } else if (ext.endsWith(".emotecraft")) {
-                                animations = io.github.kosmx.emotes.server.serializer.UniversalEmoteSerializer.readData(is, null, "emotecraft");
+                                format = "emotecraft";
                             } else {
-                                animations = io.github.kosmx.emotes.server.serializer.UniversalEmoteSerializer.readData(is, null, "quark");
+                                format = isJsonContent(bytes) ? "json" : "quark";
                             }
+                            java.util.List<dev.kosmx.playerAnim.core.data.KeyframeAnimation> animations =
+                                io.github.kosmx.emotes.server.serializer.UniversalEmoteSerializer.readData(new java.io.ByteArrayInputStream(bytes), null, format);
                             if (animations != null) {
+                                String baseName = file.getFileName().toString();
+                                int dot = baseName.lastIndexOf('.');
+                                if (dot > 0) baseName = baseName.substring(0, dot);
+                                String nameKey = baseName.toLowerCase(Locale.ROOT);
                                 for (dev.kosmx.playerAnim.core.data.KeyframeAnimation anim : animations) {
                                     java.util.UUID uuid = anim.getUuid();
                                     if (uuid != null) {
                                         io.github.kosmx.emotes.server.serializer.UniversalEmoteSerializer.hiddenServerEmotes.put(uuid, anim);
+                                        EMOTE_BY_NAME.put(nameKey, uuid);
                                     }
                                 }
                             }
-                            is.close();
                         } catch (Exception e) {
                             LOGGER.error("Failed to load emote: {}", file.getFileName(), e);
                         }
@@ -148,6 +161,18 @@ public class CnpcEmoteMod {
         } catch (Exception e) {
             LOGGER.error("Failed to scan CNPC emotes", e);
         }
+    }
+
+    /**
+     * 判断字节内容是否为 JSON 格式：跳过前导空白后第一个字符是 '{'。
+     * 用于区分 .emote 文件里到底是 quark 二进制还是 JSON 文本。
+     */
+    private static boolean isJsonContent(byte[] bytes) {
+        for (byte b : bytes) {
+            if (b == ' ' || b == '\t' || b == '\r' || b == '\n') continue;
+            return b == '{';
+        }
+        return false;
     }
 
     @SubscribeEvent
@@ -257,6 +282,8 @@ public class CnpcEmoteMod {
         public static void handle(EmoteStartPacket packet, Supplier<net.minecraftforge.network.NetworkEvent.Context> contextSupplier) {
             net.minecraftforge.network.NetworkEvent.Context context = contextSupplier.get();
             context.enqueueWork(() -> {
+                // 服务端安全：这些是 S2C 包，若被恶意客户端伪造发到服务端，直接忽略，避免加载客户端类 NpcEmoteClientState
+                if (context.getSender() != null) return;
                 NpcEmoteClientState.getOrCreate(packet.npcId).play(packet.emoteId, packet.gameTime, packet.entityId);
             });
             context.setPacketHandled(true);
@@ -280,7 +307,11 @@ public class CnpcEmoteMod {
 
         public static void handle(EmoteStopPacket packet, Supplier<net.minecraftforge.network.NetworkEvent.Context> contextSupplier) {
             net.minecraftforge.network.NetworkEvent.Context context = contextSupplier.get();
-            context.enqueueWork(() -> NpcEmoteClientState.remove(packet.npcId));
+            context.enqueueWork(() -> {
+                // 服务端安全：这些是 S2C 包，若被恶意客户端伪造发到服务端，直接忽略
+                if (context.getSender() != null) return;
+                NpcEmoteClientState.remove(packet.npcId);
+            });
             context.setPacketHandled(true);
         }
     }

@@ -10,7 +10,8 @@
   ],
   "client": [
     "CnpcEmoteModelMixin",
-    "CnpcEmoteRendererMixin"
+    "CnpcEmoteRendererMixin",
+    "EmoteKeyDisableMixin"
   ],
   "server": []
 }
