@@ -107,10 +107,7 @@ public final class BinCnpcEmoteCommand {
         for (EntityNPCInterface npc : npcs) {
             npc.currentAnimation = animId;
             npc.animationStart = (int) level.getGameTime();
-            NpcEmoteState state = NpcEmoteState.getOrCreate(npc.getUUID());
-            state.play(emoteId, gameTime);
-            NpcEmoteState.trackEntityId(npc.getUUID(), npc.getId());
-            CnpcEmoteMod.broadcastEmoteStart(level, npc.getUUID(), emoteId, gameTime, npc.getId());
+            CnpcEmoteMod.startEmote(level, npc, emoteId, gameTime);
         }
 
         final String finalEmoteName = emoteName;
@@ -139,10 +136,9 @@ public final class BinCnpcEmoteCommand {
         }
 
         for (EntityNPCInterface npc : npcs) {
-            CnpcEmoteMod.broadcastEmoteStop(level, npc.getUUID());
-            NpcEmoteState.remove(npc.getUUID());
             npc.currentAnimation = 0;
             npc.animationStart = 0;
+            CnpcEmoteMod.stopEmote(level, npc);
         }
 
         source.sendSuccess(() -> Component.translatable("cnpcemotes.command.stopped", npcs.size()), true);
