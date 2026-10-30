@@ -29,6 +29,7 @@ public abstract class CnpcEmoteRendererMixin<T extends LivingEntity> {
         String rendererName = this.getClass().getName();
         if (!rendererName.contains("RenderCustomNpc")) return;
 
+        applier.setTickDelta(partialTicks);
         Vec3f posVec = applier.get3DTransform("body", TransformType.POSITION, new Vec3f(0.0f, 0.0f, 0.0f));
         poseStack.translate((double)((Float)posVec.getX()).floatValue(), (double)((Float)posVec.getY()).floatValue() + 0.7, (double)((Float)posVec.getZ()).floatValue());
         Vec3f rotVec = applier.get3DTransform("body", TransformType.ROTATION, new Vec3f(0.0f, 0.0f, 0.0f));

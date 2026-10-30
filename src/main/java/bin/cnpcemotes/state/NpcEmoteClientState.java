@@ -1,14 +1,16 @@
 package bin.cnpcemotes.state;
 
-import dev.kosmx.playerAnim.api.layered.IAnimation;
 import dev.kosmx.playerAnim.api.layered.KeyframeAnimationPlayer;
+import dev.kosmx.playerAnim.core.data.AnimationBinary;
 import dev.kosmx.playerAnim.core.data.KeyframeAnimation;
 import dev.kosmx.playerAnim.impl.animation.AnimationApplier;
 import io.github.kosmx.emotes.api.events.server.ServerEmoteAPI;
+import net.minecraft.client.Minecraft;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.Iterator;
+import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -16,13 +18,11 @@ import java.util.concurrent.ConcurrentHashMap;
 public class NpcEmoteClientState {
     private static final Logger LOGGER = LogManager.getLogger();
     private static final Map<UUID, NpcEmoteClientState> ACTIVE = new ConcurrentHashMap<>();
-    private static final Map<UUID, Integer> NPC_ENTITY_ID = new ConcurrentHashMap<>();
-    private static int tickCounter = 0;
 
     private AnimationApplier applier;
     private UUID currentEmoteId;
-    private UUID pendingEmoteId;
     private int trackedEntityId = -1;
+    private long startedAtGameTime;
 
     private NpcEmoteClientState() {
     }
@@ -32,12 +32,14 @@ public class NpcEmoteClientState {
     }
 
     public static void trackEntity(UUID npcUuid, int entityId) {
-        NPC_ENTITY_ID.put(npcUuid, entityId);
         NpcEmoteClientState state = ACTIVE.get(npcUuid);
         if (state != null) {
-            state.trackedEntityId = entityId;
+            if (state.trackedEntityId != -1 && state.trackedEntityId != entityId) {
+                remove(npcUuid);
+            } else {
+                state.trackedEntityId = entityId;
+            }
         }
-        LOGGER.info("[CNPC-Emote] Client trackEntity: uuid={}, entityId={}", npcUuid, entityId);
     }
 
     public static AnimationApplier getApplier(UUID npcId) {
@@ -46,22 +48,15 @@ public class NpcEmoteClientState {
     }
 
     public static void clearAll() {
-        LOGGER.info("[CNPC-Emote] Client clearAll called, active={}", ACTIVE.size());
         ACTIVE.values().forEach(NpcEmoteClientState::stop);
         ACTIVE.clear();
-        NPC_ENTITY_ID.clear();
     }
 
     public static void remove(UUID npcId) {
-        LOGGER.info("[CNPC-Emote] Client remove: uuid={}, existed={}, applierActive={}",
-                npcId, ACTIVE.containsKey(npcId),
-                ACTIVE.get(npcId) != null && ACTIVE.get(npcId).applier != null);
-        NpcEmoteClientState state = ACTIVE.get(npcId);
+        NpcEmoteClientState state = ACTIVE.remove(npcId);
         if (state != null) {
             state.stop();
         }
-        ACTIVE.remove(npcId);
-        NPC_ENTITY_ID.remove(npcId);
     }
 
     public static int ACTIVE_SIZE() {
@@ -69,27 +64,11 @@ public class NpcEmoteClientState {
     }
 
     public static void tickAll() {
-        tickCounter++;
         Iterator<Map.Entry<UUID, NpcEmoteClientState>> it = ACTIVE.entrySet().iterator();
         while (it.hasNext()) {
             Map.Entry<UUID, NpcEmoteClientState> entry = it.next();
             NpcEmoteClientState state = entry.getValue();
-            UUID npcUuid = entry.getKey();
-
-            if (state.applier == null && state.pendingEmoteId != null) {
-                state.tryStartPending();
-            }
             if (state.applier == null) {
-                continue;
-            }
-
-            // Check entity ID mismatch every tick
-            Integer storedId = NPC_ENTITY_ID.get(npcUuid);
-            if (storedId != null && storedId != state.trackedEntityId) {
-                LOGGER.info("[CNPC-Emote] Client entity ID changed: uuid={}, old={}, new={}, applierActive={}",
-                        npcUuid, state.trackedEntityId, storedId,
-                        state.applier != null && state.applier.isActive());
-                state.stop();
                 it.remove();
                 continue;
             }
@@ -98,53 +77,50 @@ public class NpcEmoteClientState {
             if (state.applier.isActive()) {
                 continue;
             }
-            LOGGER.info("[CNPC-Emote] Client applier inactive: uuid={}, removing", npcUuid);
-            state.applier = null;
-            state.currentEmoteId = null;
-            state.pendingEmoteId = null;
+            state.stop();
             it.remove();
         }
     }
 
     public void play(UUID emoteId, long startGameTime, int entityId) {
-        this.trackedEntityId = entityId;
-        if (emoteId.equals(this.currentEmoteId) && this.applier != null && this.applier.isActive()) {
-            return;
-        }
-        this.pendingEmoteId = emoteId;
-        this.applier = null;
-        this.currentEmoteId = null;
-        this.tryStartPending();
+        play(emoteId, startGameTime, entityId, new byte[0]);
     }
 
     public void play(UUID emoteId, long startGameTime) {
         play(emoteId, startGameTime, -1);
     }
 
-    private void tryStartPending() {
-        if (this.pendingEmoteId == null) {
-            return;
-        }
-        Map<UUID, KeyframeAnimation> loaded = ServerEmoteAPI.getLoadedEmotes();
-        KeyframeAnimation emote = loaded.get(this.pendingEmoteId);
-        if (emote == null) {
-            this.pendingEmoteId = null;
-            return;
-        }
+    public void play(UUID emoteId, long startGameTime, int entityId, byte[] animationData) {
+        if (emoteId.equals(currentEmoteId) && startedAtGameTime == startGameTime && trackedEntityId == entityId && applier != null && applier.isActive()) return;
+        stop();
+        this.trackedEntityId = entityId;
+        this.startedAtGameTime = startGameTime;
         try {
-            KeyframeAnimationPlayer playing = new KeyframeAnimationPlayer(emote, 1, true);
-            this.applier = new AnimationApplier((IAnimation) playing);
-            this.currentEmoteId = this.pendingEmoteId;
-            this.pendingEmoteId = null;
+            // 远端存档动画由 S2C 包携带；不将数据塞进全局注册表或写入个人目录。
+            KeyframeAnimation emote;
+            if (animationData.length == 0) {
+                emote = ServerEmoteAPI.getEmote(emoteId);
+            } else {
+                ByteBuffer data = ByteBuffer.wrap(animationData);
+                emote = AnimationBinary.read(data, 2);
+                if (data.hasRemaining() || !emoteId.equals(emote.getUuid())) {
+                    throw new IllegalArgumentException("Invalid NPC animation payload");
+                }
+            }
+            if (emote == null) return;
+            var level = Minecraft.getInstance().level;
+            int elapsed = level == null ? 0 : (int) Math.min(Integer.MAX_VALUE, Math.max(0L, level.getGameTime() - startGameTime));
+            if (!emote.isInfinite && elapsed >= emote.stopTick) return;
+            // NPC 不修改关键帧，直接共享不可变数据，避免为每个 NPC 再复制整份动画。
+            this.applier = new AnimationApplier(new KeyframeAnimationPlayer(emote, elapsed));
+            this.currentEmoteId = emoteId;
         } catch (Exception e) {
-            LOGGER.error("[CNPC-Emote] Failed to load emote: {}", this.pendingEmoteId, e);
-            this.pendingEmoteId = null;
+            LOGGER.error("[CNPC-Emote] Failed to load emote: {}", emoteId, e);
         }
     }
 
     public void stop() {
         this.applier = null;
         this.currentEmoteId = null;
-        this.pendingEmoteId = null;
     }
 }
